@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
@@ -13,6 +13,9 @@ import BookingsPage from "@/pages/bookings";
 import AvailabilityPage from "@/pages/availability";
 import BusinessPage from "@/pages/business";
 import WidgetPage from "@/pages/widget";
+import PrivacyPage from "@/pages/privacy";
+import TermsPage from "@/pages/terms";
+import ContactPage from "@/pages/contact";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -98,11 +101,12 @@ const clerkAppearance = {
 
 function SignInPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-muted/40 px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-muted/40 px-4 py-8">
       <SignIn
         routing="path"
         path={`${basePath}/sign-in`}
         signUpUrl={`${basePath}/sign-up`}
+        fallbackRedirectUrl={`${basePath}/dashboard`}
       />
     </div>
   );
@@ -110,11 +114,12 @@ function SignInPage() {
 
 function SignUpPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-muted/40 px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-muted/40 px-4 py-8">
       <SignUp
         routing="path"
         path={`${basePath}/sign-up`}
         signInUrl={`${basePath}/sign-in`}
+        fallbackRedirectUrl={`${basePath}/dashboard`}
       />
     </div>
   );
@@ -209,6 +214,10 @@ function ClerkProviderWithRoutes() {
             </Route>
 
             <Route path="/widget/:businessId" component={WidgetPage} />
+
+            <Route path="/privacy" component={PrivacyPage} />
+            <Route path="/terms" component={TermsPage} />
+            <Route path="/contact" component={ContactPage} />
 
             <Route component={NotFound} />
           </Switch>
