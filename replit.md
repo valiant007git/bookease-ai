@@ -28,6 +28,7 @@ React + Vite SaaS frontend. Pages:
 - `/dashboard` — Business stats overview (protected)
 - `/bookings` — Appointment management (protected)
 - `/availability` — Weekly hours/slot settings (protected)
+- `/whatsapp` — WhatsApp inbox + settings (protected)
 - `/business` — Business profile setup (protected)
 - `/widget/:businessId` — Public AI chatbot booking widget
 
@@ -39,15 +40,33 @@ Express 5 REST API. Routes:
 - `GET/POST/PUT/DELETE /api/availability` — Availability slots
 - `GET /api/appointments` — List appointments (owner)
 - `PATCH /api/appointments/:id/status` — Update status
-- `POST /api/appointments` — Book appointment (public)
+- `POST /api/appointments` — Book appointment (public); triggers WhatsApp confirmation if customerPhone provided
 - `GET /api/chat/:businessId` — AI chatbot SSE stream (public)
+- `GET/PUT /api/businesses/me/whatsapp/settings` — WhatsApp settings (auth)
+- `GET /api/businesses/me/whatsapp/conversations` — List conversations (auth)
+- `GET /api/businesses/me/whatsapp/conversations/:id/messages` — List messages (auth)
+- `POST /api/businesses/me/whatsapp/conversations/:id/send` — Send message (auth)
+- `GET/POST /api/whatsapp/webhook` — Meta/Twilio webhook (public)
 
 ## Libraries
 
 - `lib/api-spec` — OpenAPI spec + Orval codegen config
-- `lib/api-zod` — Generated Zod schemas (from Orval)
+- `lib/api-zod` — Generated Zod schemas (from Orval). `src/index.ts` exports ONLY from `./generated/api` — the codegen script post-processes this file to remove the duplicate `./generated/types` export that Orval adds (would cause TS2308 ambiguity).
 - `lib/api-client-react` — Generated React Query hooks (from Orval)
 - `lib/db` — Drizzle schema, migrations, seed data
+
+## WhatsApp Integration
+
+Provider layer at `artifacts/api-server/src/lib/whatsapp/`:
+- `types.ts` — Provider interface
+- `providers/twilio.ts` — Twilio WhatsApp provider
+- `providers/cloudApi.ts` — Meta Cloud API provider
+- `service.ts` — Business logic (send messages, process inbound, confirmations)
+- `scheduler.ts` — 15-min cron for appointment reminders
+
+DB tables: `whatsapp_settings`, `whatsapp_conversations`, `whatsapp_messages`, `whatsapp_notifications` (in `lib/db/src/schema/whatsapp.ts`).
+
+Webhook at `POST /api/whatsapp/webhook` handles inbound from both Twilio and Meta. Routes to business by phone number ID. Webhook token checked via `WHATSAPP_WEBHOOK_TOKEN` env var.
 
 ## Key Commands
 

@@ -10,6 +10,7 @@ import {
   CreateAppointmentParams,
 } from "@workspace/api-zod";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
+import { sendAppointmentConfirmation } from "../lib/whatsapp/service";
 
 const router = Router();
 
@@ -139,6 +140,20 @@ router.post("/businesses/:businessId/appointments", async (req: any, res) => {
       .returning();
 
     res.status(201).json(appointment);
+
+    // Fire-and-forget: send WhatsApp confirmation (non-blocking)
+    if (body.customerPhone) {
+      sendAppointmentConfirmation(businessId, {
+          id: appointment.id,
+          customerName: body.customerName ?? "",
+          customerPhone: body.customerPhone ?? null,
+          service: body.service ?? null,
+          appointmentDate: new Date(body.appointmentDate),
+        })
+        .catch((err: unknown) => {
+          req.log?.warn({ err }, "WhatsApp confirmation failed (non-fatal)");
+        });
+    }
   } catch (err) {
     req.log.error({ err }, "Failed to create appointment");
     res.status(500).json({ error: "Internal server error" });

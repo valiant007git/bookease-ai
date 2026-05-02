@@ -22,6 +22,8 @@ tags:
     description: Dashboard summary and analytics
   - name: openai
     description: OpenAI AI chat operations
+  - name: whatsapp
+    description: WhatsApp messaging and conversations
 paths:
   /healthz:
     get:
@@ -451,6 +453,132 @@ paths:
           content:
             text/event-stream: {}
 
+  /businesses/me/whatsapp/settings:
+    get:
+      operationId: getWhatsAppSettings
+      tags: [whatsapp]
+      summary: Get WhatsApp settings for current business
+      responses:
+        "200":
+          description: WhatsApp settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppSettings"
+        "404":
+          description: Not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: upsertWhatsAppSettings
+      tags: [whatsapp]
+      summary: Create or update WhatsApp settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertWhatsAppSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppSettings"
+
+  /businesses/me/whatsapp/conversations:
+    get:
+      operationId: listWhatsAppConversations
+      tags: [whatsapp]
+      summary: List WhatsApp conversations for current business
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WhatsAppConversation"
+
+  /businesses/me/whatsapp/conversations/{conversationId}/messages:
+    get:
+      operationId: listWhatsAppMessages
+      tags: [whatsapp]
+      summary: List messages in a WhatsApp conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WhatsAppMessage"
+
+  /businesses/me/whatsapp/conversations/{conversationId}/send:
+    post:
+      operationId: sendWhatsAppMessage
+      tags: [whatsapp]
+      summary: Send a WhatsApp message to a customer
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendWhatsAppMessageBody"
+      responses:
+        "201":
+          description: Sent message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppMessage"
+
+  /whatsapp/webhook:
+    get:
+      operationId: verifyWhatsAppWebhook
+      tags: [whatsapp]
+      summary: Meta webhook verification challenge
+      parameters:
+        - name: hub.mode
+          in: query
+          schema:
+            type: string
+        - name: hub.challenge
+          in: query
+          schema:
+            type: string
+        - name: hub.verify_token
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification challenge
+    post:
+      operationId: receiveWhatsAppWebhook
+      tags: [whatsapp]
+      summary: Receive incoming WhatsApp messages
+      responses:
+        "200":
+          description: Processed
+
 components:
   schemas:
     HealthStatus:
@@ -770,3 +898,157 @@ components:
           type: string
       required:
         - error
+
+    WhatsAppSettings:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        provider:
+          type: string
+          enum: [twilio, cloud_api]
+        enabled:
+          type: boolean
+        phoneNumberId:
+          type: string
+          nullable: true
+        wabaId:
+          type: string
+          nullable: true
+        accessToken:
+          type: string
+          nullable: true
+        twilioAccountSid:
+          type: string
+          nullable: true
+        twilioAuthToken:
+          type: string
+          nullable: true
+        twilioPhoneNumber:
+          type: string
+          nullable: true
+        webhookSecret:
+          type: string
+          nullable: true
+        sendConfirmations:
+          type: boolean
+        sendReminders:
+          type: boolean
+        reminderHoursBefore:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - businessId
+        - provider
+        - enabled
+        - sendConfirmations
+        - sendReminders
+        - reminderHoursBefore
+        - createdAt
+        - updatedAt
+
+    UpsertWhatsAppSettingsBody:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [twilio, cloud_api]
+        enabled:
+          type: boolean
+        phoneNumberId:
+          type: string
+        wabaId:
+          type: string
+        accessToken:
+          type: string
+        twilioAccountSid:
+          type: string
+        twilioAuthToken:
+          type: string
+        twilioPhoneNumber:
+          type: string
+        webhookSecret:
+          type: string
+        sendConfirmations:
+          type: boolean
+        sendReminders:
+          type: boolean
+        reminderHoursBefore:
+          type: integer
+
+    WhatsAppConversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        customerPhone:
+          type: string
+        customerName:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [open, closed]
+        lastMessageAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        lastMessage:
+          $ref: "#/components/schemas/WhatsAppMessage"
+          nullable: true
+      required:
+        - id
+        - businessId
+        - customerPhone
+        - status
+        - lastMessageAt
+        - createdAt
+
+    WhatsAppMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        body:
+          type: string
+        externalId:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [sent, delivered, read, failed, received]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - conversationId
+        - direction
+        - body
+        - status
+        - createdAt
+
+    SendWhatsAppMessageBody:
+      type: object
+      properties:
+        body:
+          type: string
+      required:
+        - body

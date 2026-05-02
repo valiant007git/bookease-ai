@@ -6,6 +6,7 @@ import appointmentsRouter from "./appointments";
 import dashboardRouter from "./dashboard";
 import chatRouter from "./chat";
 import openaiRouter from "./openai";
+import whatsappRouter from "./whatsapp";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(appointmentsRouter);
 router.use(dashboardRouter);
 router.use(chatRouter);
 router.use(openaiRouter);
+router.use(whatsappRouter);
 
 export default router;

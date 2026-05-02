@@ -413,3 +413,129 @@ export const SendOpenaiMessageParams = zod.object({
 export const SendOpenaiMessageBody = zod.object({
   content: zod.string(),
 });
+
+/**
+ * @summary Get WhatsApp settings for current business
+ */
+export const GetWhatsAppSettingsResponse = zod.object({
+  id: zod.number(),
+  businessId: zod.number(),
+  provider: zod.enum(["twilio", "cloud_api"]),
+  enabled: zod.boolean(),
+  phoneNumberId: zod.string().nullish(),
+  wabaId: zod.string().nullish(),
+  accessToken: zod.string().nullish(),
+  twilioAccountSid: zod.string().nullish(),
+  twilioAuthToken: zod.string().nullish(),
+  twilioPhoneNumber: zod.string().nullish(),
+  webhookSecret: zod.string().nullish(),
+  sendConfirmations: zod.boolean(),
+  sendReminders: zod.boolean(),
+  reminderHoursBefore: zod.number(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Create or update WhatsApp settings
+ */
+export const UpsertWhatsAppSettingsBody = zod.object({
+  provider: zod.enum(["twilio", "cloud_api"]).optional(),
+  enabled: zod.boolean().optional(),
+  phoneNumberId: zod.string().optional(),
+  wabaId: zod.string().optional(),
+  accessToken: zod.string().optional(),
+  twilioAccountSid: zod.string().optional(),
+  twilioAuthToken: zod.string().optional(),
+  twilioPhoneNumber: zod.string().optional(),
+  webhookSecret: zod.string().optional(),
+  sendConfirmations: zod.boolean().optional(),
+  sendReminders: zod.boolean().optional(),
+  reminderHoursBefore: zod.number().optional(),
+});
+
+export const UpsertWhatsAppSettingsResponse = zod.object({
+  id: zod.number(),
+  businessId: zod.number(),
+  provider: zod.enum(["twilio", "cloud_api"]),
+  enabled: zod.boolean(),
+  phoneNumberId: zod.string().nullish(),
+  wabaId: zod.string().nullish(),
+  accessToken: zod.string().nullish(),
+  twilioAccountSid: zod.string().nullish(),
+  twilioAuthToken: zod.string().nullish(),
+  twilioPhoneNumber: zod.string().nullish(),
+  webhookSecret: zod.string().nullish(),
+  sendConfirmations: zod.boolean(),
+  sendReminders: zod.boolean(),
+  reminderHoursBefore: zod.number(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary List WhatsApp conversations for current business
+ */
+export const ListWhatsAppConversationsResponseItem = zod.object({
+  id: zod.number(),
+  businessId: zod.number(),
+  customerPhone: zod.string(),
+  customerName: zod.string().nullish(),
+  status: zod.enum(["open", "closed"]),
+  lastMessageAt: zod.coerce.date(),
+  createdAt: zod.coerce.date(),
+  lastMessage: zod
+    .object({
+      id: zod.number(),
+      conversationId: zod.number(),
+      direction: zod.enum(["inbound", "outbound"]),
+      body: zod.string(),
+      externalId: zod.string().nullish(),
+      status: zod.enum(["sent", "delivered", "read", "failed", "received"]),
+      createdAt: zod.coerce.date(),
+    })
+    .nullish(),
+});
+export const ListWhatsAppConversationsResponse = zod.array(
+  ListWhatsAppConversationsResponseItem,
+);
+
+/**
+ * @summary List messages in a WhatsApp conversation
+ */
+export const ListWhatsAppMessagesParams = zod.object({
+  conversationId: zod.coerce.number(),
+});
+
+export const ListWhatsAppMessagesResponseItem = zod.object({
+  id: zod.number(),
+  conversationId: zod.number(),
+  direction: zod.enum(["inbound", "outbound"]),
+  body: zod.string(),
+  externalId: zod.string().nullish(),
+  status: zod.enum(["sent", "delivered", "read", "failed", "received"]),
+  createdAt: zod.coerce.date(),
+});
+export const ListWhatsAppMessagesResponse = zod.array(
+  ListWhatsAppMessagesResponseItem,
+);
+
+/**
+ * @summary Send a WhatsApp message to a customer
+ */
+export const SendWhatsAppMessageParams = zod.object({
+  conversationId: zod.coerce.number(),
+});
+
+export const SendWhatsAppMessageBody = zod.object({
+  body: zod.string(),
+});
+
+/**
+ * @summary Meta webhook verification challenge
+ */
+export const VerifyWhatsAppWebhookQueryParams = zod.object({
+  "hub.mode": zod.coerce.string().optional(),
+  "hub.challenge": zod.coerce.string().optional(),
+  "hub.verify_token": zod.coerce.string().optional(),
+});

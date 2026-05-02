@@ -184,6 +184,108 @@ export interface OpenaiError {
   error: string;
 }
 
+export type WhatsAppSettingsProvider =
+  (typeof WhatsAppSettingsProvider)[keyof typeof WhatsAppSettingsProvider];
+
+export const WhatsAppSettingsProvider = {
+  twilio: "twilio",
+  cloud_api: "cloud_api",
+} as const;
+
+export interface WhatsAppSettings {
+  id: number;
+  businessId: number;
+  provider: WhatsAppSettingsProvider;
+  enabled: boolean;
+  phoneNumberId?: string | null;
+  wabaId?: string | null;
+  accessToken?: string | null;
+  twilioAccountSid?: string | null;
+  twilioAuthToken?: string | null;
+  twilioPhoneNumber?: string | null;
+  webhookSecret?: string | null;
+  sendConfirmations: boolean;
+  sendReminders: boolean;
+  reminderHoursBefore: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type UpsertWhatsAppSettingsBodyProvider =
+  (typeof UpsertWhatsAppSettingsBodyProvider)[keyof typeof UpsertWhatsAppSettingsBodyProvider];
+
+export const UpsertWhatsAppSettingsBodyProvider = {
+  twilio: "twilio",
+  cloud_api: "cloud_api",
+} as const;
+
+export interface UpsertWhatsAppSettingsBody {
+  provider?: UpsertWhatsAppSettingsBodyProvider;
+  enabled?: boolean;
+  phoneNumberId?: string;
+  wabaId?: string;
+  accessToken?: string;
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioPhoneNumber?: string;
+  webhookSecret?: string;
+  sendConfirmations?: boolean;
+  sendReminders?: boolean;
+  reminderHoursBefore?: number;
+}
+
+export type WhatsAppConversationStatus =
+  (typeof WhatsAppConversationStatus)[keyof typeof WhatsAppConversationStatus];
+
+export const WhatsAppConversationStatus = {
+  open: "open",
+  closed: "closed",
+} as const;
+
+export type WhatsAppMessageDirection =
+  (typeof WhatsAppMessageDirection)[keyof typeof WhatsAppMessageDirection];
+
+export const WhatsAppMessageDirection = {
+  inbound: "inbound",
+  outbound: "outbound",
+} as const;
+
+export type WhatsAppMessageStatus =
+  (typeof WhatsAppMessageStatus)[keyof typeof WhatsAppMessageStatus];
+
+export const WhatsAppMessageStatus = {
+  sent: "sent",
+  delivered: "delivered",
+  read: "read",
+  failed: "failed",
+  received: "received",
+} as const;
+
+export interface WhatsAppMessage {
+  id: number;
+  conversationId: number;
+  direction: WhatsAppMessageDirection;
+  body: string;
+  externalId?: string | null;
+  status: WhatsAppMessageStatus;
+  createdAt: string;
+}
+
+export interface WhatsAppConversation {
+  id: number;
+  businessId: number;
+  customerPhone: string;
+  customerName?: string | null;
+  status: WhatsAppConversationStatus;
+  lastMessageAt: string;
+  createdAt: string;
+  lastMessage?: WhatsAppMessage | null;
+}
+
+export interface SendWhatsAppMessageBody {
+  body: string;
+}
+
 export type ListMyAppointmentsParams = {
   status?: ListMyAppointmentsStatus;
   /**
@@ -201,3 +303,9 @@ export const ListMyAppointmentsStatus = {
   cancelled: "cancelled",
   completed: "completed",
 } as const;
+
+export type VerifyWhatsAppWebhookParams = {
+  "hub.mode"?: string;
+  "hub.challenge"?: string;
+  "hub.verify_token"?: string;
+};

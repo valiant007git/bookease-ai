@@ -11,6 +11,7 @@ import {
   Sun,
   Moon,
   ChevronRight,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/bookings", label: "Bookings", icon: CalendarDays },
   { href: "/availability", label: "Availability", icon: Clock },
+  { href: "/whatsapp", label: "WhatsApp", icon: MessageSquare },
   { href: "/business", label: "Business Profile", icon: Building2 },
 ];
 

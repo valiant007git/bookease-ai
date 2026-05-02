@@ -19,6 +19,7 @@ import WidgetPage from "@/pages/widget";
 import PrivacyPage from "@/pages/privacy";
 import TermsPage from "@/pages/terms";
 import ContactPage from "@/pages/contact";
+import WhatsAppPage from "@/pages/whatsapp";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -346,6 +347,12 @@ function ClerkProviderWithRoutes() {
             <Route path="/business">
               <AuthGuard>
                 <BusinessPage />
+              </AuthGuard>
+            </Route>
+
+            <Route path="/whatsapp">
+              <AuthGuard>
+                <WhatsAppPage />
               </AuthGuard>
             </Route>
 
