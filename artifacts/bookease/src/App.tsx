@@ -136,10 +136,6 @@ function SignUpPage() {
 }
 
 function HomeRedirect() {
-  const { isLoaded, isSignedIn } = useAuth();
-
-  if (!isLoaded) return <LoadingSpinner />;
-  if (isSignedIn) return <Redirect to="/dashboard" />;
   return <LandingPage />;
 }
 

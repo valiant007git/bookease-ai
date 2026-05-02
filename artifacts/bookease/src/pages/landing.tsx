@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
+import { useAuth } from "@clerk/react";
 import { motion, useInView, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -185,6 +186,7 @@ function NavBar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { dark, toggle } = useDark();
+  const { isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -238,16 +240,26 @@ function NavBar() {
           >
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          <Link href="/sign-in">
-            <Button variant="ghost" size="sm" className="text-sm text-muted-foreground hover:text-foreground">
-              Sign in
-            </Button>
-          </Link>
-          <Link href="/sign-up">
-            <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 shadow-sm shadow-primary/25">
-              Get started free
-            </Button>
-          </Link>
+          {isLoaded && isSignedIn ? (
+            <Link href="/dashboard">
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 shadow-sm shadow-primary/25 gap-1.5">
+                Dashboard <ArrowRight size={14} />
+              </Button>
+            </Link>
+          ) : (
+            <>
+              <Link href="/sign-in">
+                <Button variant="ghost" size="sm" className="text-sm text-muted-foreground hover:text-foreground">
+                  Sign in
+                </Button>
+              </Link>
+              <Link href="/sign-up">
+                <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 shadow-sm shadow-primary/25">
+                  Get started free
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -286,13 +298,23 @@ function NavBar() {
                   {label}
                 </a>
               ))}
-              <div className="pt-3 grid grid-cols-2 gap-2">
-                <Link href="/sign-in" onClick={() => setOpen(false)}>
-                  <Button variant="outline" className="w-full text-sm">Sign in</Button>
-                </Link>
-                <Link href="/sign-up" onClick={() => setOpen(false)}>
-                  <Button className="w-full text-sm bg-primary text-primary-foreground">Get started</Button>
-                </Link>
+              <div className="pt-3 flex flex-col gap-2">
+                {isLoaded && isSignedIn ? (
+                  <Link href="/dashboard" onClick={() => setOpen(false)}>
+                    <Button className="w-full text-sm bg-primary text-primary-foreground gap-1.5">
+                      Go to Dashboard <ArrowRight size={14} />
+                    </Button>
+                  </Link>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link href="/sign-in" onClick={() => setOpen(false)}>
+                      <Button variant="outline" className="w-full text-sm">Sign in</Button>
+                    </Link>
+                    <Link href="/sign-up" onClick={() => setOpen(false)}>
+                      <Button className="w-full text-sm bg-primary text-primary-foreground">Get started</Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
