@@ -86,11 +86,15 @@ export default function OnboardingPage() {
   const { isLoaded, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
 
+  // Only run once Clerk has confirmed the user is signed in so the request
+  // goes out with a valid Bearer token. Without this guard the query fires
+  // unauthenticated, gets a 401, and never retries — leaving the page stuck.
   const { data: existingBusiness, isSuccess: hasExistingBusiness } =
     useGetMyBusiness({
       query: {
         queryKey: getGetMyBusinessQueryKey(),
         retry: false,
+        enabled: isLoaded && !!isSignedIn,
       },
     });
 

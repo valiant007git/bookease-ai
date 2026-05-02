@@ -1,13 +1,16 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   useGetDashboardSummary,
   useGetUpcomingAppointments,
+  useGetMyBusiness,
   getGetDashboardSummaryQueryKey,
   getGetUpcomingAppointmentsQueryKey,
+  getGetMyBusinessQueryKey,
 } from "@workspace/api-client-react";
 import { CalendarDays, Clock, CheckCircle2, Users, TrendingUp, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Layout from "@/components/Layout";
@@ -21,6 +24,24 @@ const statusColors: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+  const [, setLocation] = useLocation();
+
+  // Gate: redirect users who signed up but never finished onboarding.
+  // The API returns 404 when the authenticated user has no business yet.
+  const { error: bizError, isError: bizIsError } = useGetMyBusiness({
+    query: {
+      queryKey: getGetMyBusinessQueryKey(),
+      retry: false,
+      staleTime: Infinity,
+    },
+  });
+
+  useEffect(() => {
+    if (bizIsError && (bizError as any)?.status === 404) {
+      setLocation("/onboarding", { replace: true });
+    }
+  }, [bizIsError, bizError, setLocation]);
+
   const { data: summary, isLoading: summaryLoading } = useGetDashboardSummary({
     query: { queryKey: getGetDashboardSummaryQueryKey() },
   });

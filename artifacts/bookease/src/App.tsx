@@ -150,7 +150,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   if (!isLoaded) return <LoadingSpinner />;
 
   if (!isSignedIn) {
-    const returnTo = encodeURIComponent(basePath + location);
+    // Clerk requires a fully-qualified URL for redirect_url — a bare
+    // path is silently ignored and the fallbackRedirectUrl is used instead.
+    const returnTo = encodeURIComponent(
+      window.location.origin + basePath + location,
+    );
     return <Redirect to={`/sign-in?redirect_url=${returnTo}`} />;
   }
 
@@ -206,6 +210,8 @@ function ClerkProviderWithRoutes() {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
+      signInFallbackRedirectUrl={`${basePath}/dashboard`}
+      signUpFallbackRedirectUrl={`${basePath}/onboarding`}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
