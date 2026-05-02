@@ -324,237 +324,375 @@ function NavBar() {
   );
 }
 
-// ─── Product mockup (live fake UI) ────────────────────────────────────────────
-type ChatPhase = "user-typing" | "thinking" | "ai-typing" | "pausing" | "fading";
+// ─── Premium Dashboard Showcase ───────────────────────────────────────────────
+const SPARKLINE = [38, 55, 44, 72, 60, 85, 94];
 
-const USER_MSG = "Hi! I'd like to book a haircut for Saturday morning.";
-const AI_MSG   = "I have Saturday 10:00 AM or 2:30 PM free. Which works for you? 😊";
+const BOOKINGS = [
+  { time: "9:00",  name: "Sarah J.",  service: "Balayage",    dot: "bg-emerald-400", badge: "bg-emerald-500/15 text-emerald-500", label: "Confirmed"    },
+  { time: "11:00", name: "Mike C.",   service: "Cut & Style", dot: "bg-amber-400",   badge: "bg-amber-500/15 text-amber-500",     label: "In Progress"  },
+  { time: "2:00",  name: "Emma W.",   service: "Highlights",  dot: "bg-violet-400",  badge: "bg-violet-500/15 text-violet-500",   label: "Pending"      },
+  { time: "4:30",  name: "Aisha K.",  service: "Blowout",     dot: "bg-sky-400",     badge: "bg-sky-500/15 text-sky-500",         label: "Confirmed"    },
+];
+
+const MESSAGES = [
+  { name: "Alex P.", avatar: "AP", msg: "Can I reschedule to 3pm?",    time: "2m",  unread: true,  hue: 250 },
+  { name: "Sara M.", avatar: "SM", msg: "Thank you, see you Saturday!", time: "14m", unread: false, hue: 290 },
+  { name: "James K.", avatar: "JK", msg: "What services do you offer?", time: "32m", unread: false, hue: 200 },
+];
+
+const CAL_DAYS = [
+  { d: 28, prev: true  }, { d: 29, prev: true  }, { d: 30, prev: true  }, { d: 1,  prev: false },
+  { d: 2,  prev: false }, { d: 3,  prev: false }, { d: 4,  prev: false },
+  { d: 5,  prev: false }, { d: 6,  prev: false }, { d: 7,  prev: false }, { d: 8,  prev: false },
+  { d: 9,  prev: false }, { d: 10, prev: false }, { d: 11, prev: false },
+];
+
+const BOOKED_DAYS = new Set([3, 6, 8, 10]);
+
+function GlassCard({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+  return (
+    <div
+      className={cn(
+        "backdrop-blur-xl border rounded-2xl overflow-hidden",
+        "bg-card/70 dark:bg-card/60 border-white/[0.12] dark:border-white/[0.08]",
+        "shadow-[0_20px_50px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.08)]",
+        className
+      )}
+      style={style}
+    >
+      {children}
+    </div>
+  );
+}
 
 function ProductMockup() {
-  const [phase, setPhase]       = useState<ChatPhase>("user-typing");
-  const [userText, setUserText] = useState("");
-  const [aiText, setAiText]     = useState("");
-  const phaseRef = useRef<ChatPhase>("user-typing");
-
-  // Keep phaseRef in sync so timeouts can safely read current phase
-  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  const [barsReady, setBarsReady]   = useState(false);
+  const [showNotif, setShowNotif]   = useState(false);
+  const [newBooking, setNewBooking] = useState(false);
 
   useEffect(() => {
-    let t: ReturnType<typeof setTimeout>;
-
-    if (phase === "user-typing") {
-      if (userText.length < USER_MSG.length) {
-        const delay = 38 + Math.random() * 42; // 38-80 ms — feels human
-        t = setTimeout(() => setUserText(USER_MSG.slice(0, userText.length + 1)), delay);
-      } else {
-        t = setTimeout(() => setPhase("thinking"), 520);
-      }
-    } else if (phase === "thinking") {
-      t = setTimeout(() => setPhase("ai-typing"), 1600);
-    } else if (phase === "ai-typing") {
-      if (aiText.length < AI_MSG.length) {
-        const delay = 22 + Math.random() * 32; // 22-54 ms — AI types slightly faster
-        t = setTimeout(() => setAiText(AI_MSG.slice(0, aiText.length + 1)), delay);
-      } else {
-        t = setTimeout(() => setPhase("pausing"), 2800);
-      }
-    } else if (phase === "pausing") {
-      t = setTimeout(() => setPhase("fading"), 400);
-    } else if (phase === "fading") {
-      // Brief pause for fade-out, then hard reset
-      t = setTimeout(() => {
-        setUserText("");
-        setAiText("");
-        setPhase("user-typing");
-      }, 600);
-    }
-
-    return () => clearTimeout(t);
-  }, [phase, userText, aiText]);
-
-  const showUserBubble  = phase !== "fading" && userText.length > 0;
-  const showThinking    = phase === "thinking";
-  const showAiBubble    = (phase === "ai-typing" || phase === "pausing") && aiText.length > 0;
-  const isFading        = phase === "fading";
-  const isUserTyping    = phase === "user-typing";
-
-  const appointments = [
-    { time: "9:00 AM",  name: "Sarah Johnson", service: "Balayage & Cut",    status: "confirmed",   color: "bg-emerald-400" },
-    { time: "11:00 AM", name: "Mike Chen",      service: "Men's Cut & Style", status: "in progress", color: "bg-amber-400"   },
-    { time: "2:00 PM",  name: "Emma Wilson",    service: "Full Highlights",   status: "pending",     color: "bg-indigo-400"  },
-    { time: "4:30 PM",  name: "Aisha K.",        service: "Blowout",           status: "confirmed",   color: "bg-emerald-400" },
-  ];
+    const t1 = setTimeout(() => setBarsReady(true),  500);
+    const t2 = setTimeout(() => setShowNotif(true),  1800);
+    const t3 = setTimeout(() => setNewBooking(true), 3200);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
 
   return (
-    <div className="relative w-full max-w-md mx-auto lg:mx-0">
-      {/* Glow */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-violet-500/20 to-transparent rounded-3xl blur-2xl scale-110" />
+    <div className="relative w-full h-[500px] max-w-[520px] mx-auto lg:max-w-none select-none">
 
-      {/* Browser chrome */}
-      <div className="relative rounded-2xl border border-border/60 bg-card shadow-2xl overflow-hidden backdrop-blur-sm">
-        {/* Title bar */}
-        <div className="flex items-center gap-2 px-4 py-3 bg-muted/40 border-b border-border/40">
-          <div className="flex gap-1.5">
-            <div className="h-3 w-3 rounded-full bg-red-400/80" />
-            <div className="h-3 w-3 rounded-full bg-amber-400/80" />
-            <div className="h-3 w-3 rounded-full bg-emerald-400/80" />
-          </div>
-          <div className="flex-1 mx-3 bg-background/60 rounded-md px-3 py-1 text-xs text-muted-foreground border border-border/30 truncate">
-            bookease.ai/book/studio-marco
-          </div>
-        </div>
+      {/* ── Ambient glows behind cards ── */}
+      <div className="absolute inset-0 pointer-events-none -z-10">
+        <div className="absolute top-[10%] left-[15%] w-56 h-56 bg-primary/25 rounded-full blur-[70px]" />
+        <div className="absolute bottom-[10%] right-[10%] w-44 h-44 bg-violet-500/20 rounded-full blur-[60px]" />
+        <div className="absolute top-[50%] right-[25%] w-32 h-32 bg-indigo-500/15 rounded-full blur-[50px]" />
+      </div>
 
-        {/* App content */}
-        <div className="p-4 space-y-3">
-          {/* Schedule header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-foreground">Today's Schedule</p>
-              <p className="text-xs text-muted-foreground">Monday, May 4</p>
-            </div>
-            <div className="flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full">
-              <TrendingUp size={11} />
-              4 bookings
-            </div>
-          </div>
-
-          {/* Appointment list */}
-          <div className="space-y-1.5">
-            {appointments.map((a, i) => (
-              <motion.div
-                key={a.name}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.12, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/40 cursor-default"
-              >
-                <div className={`h-2 w-2 rounded-full flex-shrink-0 ${a.color}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{a.name}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{a.service}</p>
+      {/* ══════════════════════════════════
+          MAIN DASHBOARD CARD
+      ══════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, y: 28, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.75, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute left-0 top-6 w-[62%] z-10"
+      >
+        <motion.div
+          animate={{ y: [0, -9, 0] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <GlassCard>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07]">
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-sm shadow-primary/40">
+                  <Calendar size={11} className="text-white" />
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-[10px] text-muted-foreground">{a.time}</span>
-                  <span className={cn(
-                    "text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wide",
-                    a.status === "confirmed"   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" :
-                    a.status === "in progress" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" :
-                                                 "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400"
-                  )}>
-                    {a.status}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* ── Chat widget ── */}
-          <motion.div
-            animate={{ opacity: isFading ? 0 : 1 }}
-            transition={{ duration: 0.55, ease: "easeInOut" }}
-            className="border border-primary/20 rounded-xl overflow-hidden bg-primary/5"
-          >
-            {/* Chat header */}
-            <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-primary/10">
-              <div className="h-5 w-5 rounded-full bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center flex-shrink-0">
-                <Bot size={10} className="text-white" />
+                <span className="text-[11px] font-semibold text-foreground tracking-tight">Dashboard</span>
               </div>
-              <span className="text-[10px] font-semibold text-primary">AI Assistant — Online</span>
-              <span className="ml-auto flex gap-[3px] items-center">
-                {[0, 1, 2].map((i) => (
-                  <motion.span
-                    key={i}
-                    animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
-                    transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.18, ease: "easeInOut" }}
-                    className="h-[5px] w-[5px] rounded-full bg-emerald-400"
-                  />
-                ))}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <motion.span
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                  className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+                />
+                <span className="text-[9px] text-emerald-500 font-medium">Live</span>
+              </div>
             </div>
 
-            {/* Messages */}
-            <div className="px-3 py-2.5 space-y-2 min-h-[72px]">
+            {/* Stat pills */}
+            <div className="grid grid-cols-2 gap-2 p-3">
+              <div className="bg-primary/8 border border-primary/15 rounded-xl p-2.5">
+                <p className="text-[8px] uppercase tracking-wider text-muted-foreground mb-1">Bookings today</p>
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={newBooking ? "13" : "12"}
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-[22px] font-extrabold text-foreground leading-none"
+                  >
+                    {newBooking ? "13" : "12"}
+                  </motion.p>
+                </AnimatePresence>
+                <p className="text-[8px] text-emerald-500 font-medium mt-0.5">↑ +3 vs yesterday</p>
+              </div>
+              <div className="bg-violet-500/8 border border-violet-400/15 rounded-xl p-2.5">
+                <p className="text-[8px] uppercase tracking-wider text-muted-foreground mb-1">Revenue</p>
+                <p className="text-[22px] font-extrabold text-foreground leading-none">$2,840</p>
+                <p className="text-[8px] text-emerald-500 font-medium mt-0.5">↑ +12% this week</p>
+              </div>
+            </div>
+
+            {/* Bookings list */}
+            <div className="px-3 pb-3 space-y-1.5">
+              {BOOKINGS.map((b, i) => (
+                <motion.div
+                  key={b.name}
+                  initial={{ opacity: 0, x: -14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.25 + i * 0.09, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex items-center gap-2 bg-muted/30 hover:bg-muted/50 transition-colors rounded-xl px-2.5 py-2 cursor-default"
+                >
+                  <div className={cn("h-1.5 w-1.5 rounded-full flex-shrink-0", b.dot)} />
+                  <span className="text-[9px] font-semibold text-foreground w-[42px] flex-shrink-0">{b.time}</span>
+                  <span className="text-[9px] text-foreground flex-1 truncate">{b.name}</span>
+                  <span className={cn("text-[8px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0", b.badge)}>
+                    {b.label}
+                  </span>
+                </motion.div>
+              ))}
+
+              {/* New booking pop-in */}
               <AnimatePresence>
-
-                {/* User message bubble */}
-                {showUserBubble && (
+                {newBooking && (
                   <motion.div
-                    key="user-bubble"
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.95, transition: { duration: 0.3 } }}
-                    transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex justify-end"
+                    initial={{ opacity: 0, height: 0, y: -8 }}
+                    animate={{ opacity: 1, height: "auto", y: 0 }}
+                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-2.5 py-2"
                   >
-                    <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-3 py-1.5 max-w-[85%]">
-                      <span className="text-[10px] leading-relaxed">
-                        {userText}
-                        {isUserTyping && (
-                          <motion.span
-                            animate={{ opacity: [1, 0, 1] }}
-                            transition={{ duration: 0.75, repeat: Infinity, ease: "easeInOut" }}
-                            className="inline-block w-[2px] h-[10px] bg-primary-foreground/70 ml-0.5 align-middle rounded-full"
-                          />
-                        )}
-                      </span>
-                    </div>
+                    <motion.div
+                      animate={{ scale: [1, 1.3, 1] }}
+                      transition={{ duration: 0.5, repeat: 2 }}
+                      className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0"
+                    />
+                    <span className="text-[9px] font-semibold text-primary w-[42px] flex-shrink-0">5:00</span>
+                    <span className="text-[9px] text-primary flex-1">New booking!</span>
+                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">New</span>
                   </motion.div>
                 )}
-
-                {/* AI thinking indicator */}
-                {showThinking && (
-                  <motion.div
-                    key="thinking"
-                    initial={{ opacity: 0, y: 8, scale: 0.94 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
-                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex justify-start"
-                  >
-                    <div className="bg-background/80 border border-border/50 rounded-2xl rounded-bl-sm px-3 py-2 flex gap-1 items-center">
-                      {[0, 1, 2].map((i) => (
-                        <motion.span
-                          key={i}
-                          animate={{ y: [0, -4, 0] }}
-                          transition={{ duration: 0.65, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
-                          className="h-[5px] w-[5px] rounded-full bg-muted-foreground/50"
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* AI reply bubble */}
-                {showAiBubble && (
-                  <motion.div
-                    key="ai-bubble"
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.95, transition: { duration: 0.3 } }}
-                    transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex justify-start"
-                  >
-                    <div className="bg-background/80 border border-primary/20 rounded-2xl rounded-bl-sm px-3 py-1.5 max-w-[88%]">
-                      <span className="text-[10px] leading-relaxed text-foreground">
-                        {aiText}
-                        {phase === "ai-typing" && (
-                          <motion.span
-                            animate={{ opacity: [1, 0, 1] }}
-                            transition={{ duration: 0.75, repeat: Infinity, ease: "easeInOut" }}
-                            className="inline-block w-[2px] h-[10px] bg-primary/60 ml-0.5 align-middle rounded-full"
-                          />
-                        )}
-                      </span>
-                    </div>
-                  </motion.div>
-                )}
-
               </AnimatePresence>
             </div>
-          </motion.div>
+          </GlassCard>
+        </motion.div>
+      </motion.div>
 
-        </div>
-      </div>
+      {/* ══════════════════════════════════
+          ANALYTICS CARD (top-right)
+      ══════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, x: 20, scale: 0.93 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        transition={{ duration: 0.65, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute right-0 top-0 w-[41%] z-20"
+      >
+        <motion.div
+          animate={{ y: [0, -13, 0] }}
+          transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        >
+          <GlassCard className="p-3.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <BarChart3 size={11} className="text-primary" />
+                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Revenue</span>
+              </div>
+              <span className="text-[8px] bg-emerald-500/15 text-emerald-500 px-1.5 py-0.5 rounded-full font-bold">+18%</span>
+            </div>
+            <p className="text-[22px] font-extrabold text-foreground leading-none mb-3">$12,480</p>
+
+            {/* Sparkline */}
+            <div className="flex items-end gap-[3px] h-[38px] mb-1.5">
+              {SPARKLINE.map((h, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ scaleY: 0, opacity: 0 }}
+                  animate={{
+                    scaleY: barsReady ? 1 : 0,
+                    opacity: barsReady ? 1 : 0,
+                    height: `${h}%`,
+                  }}
+                  transition={{ duration: 0.55, delay: 0.35 + i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                  className={cn(
+                    "flex-1 rounded-[3px] origin-bottom",
+                    i === SPARKLINE.length - 1
+                      ? "bg-primary shadow-sm shadow-primary/40"
+                      : i >= SPARKLINE.length - 3
+                      ? "bg-primary/50"
+                      : "bg-primary/25"
+                  )}
+                  style={{ height: `${h}%` }}
+                />
+              ))}
+            </div>
+            <p className="text-[8px] text-muted-foreground">Last 7 days</p>
+
+            {/* Mini trend line */}
+            <div className="mt-2.5 flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/15 rounded-lg px-2 py-1.5">
+              <TrendingUp size={9} className="text-emerald-500 flex-shrink-0" />
+              <span className="text-[8px] text-emerald-500 font-medium">$840 above target</span>
+            </div>
+          </GlassCard>
+        </motion.div>
+      </motion.div>
+
+      {/* ══════════════════════════════════
+          MESSAGES CARD (mid-right)
+      ══════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, x: 18, scale: 0.93 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        transition={{ duration: 0.65, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute right-0 top-[43%] w-[43%] z-20"
+      >
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut", delay: 2.5 }}
+        >
+          <GlassCard className="p-3.5">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <MessageSquare size={10} className="text-violet-500" />
+                <span className="text-[9px] font-semibold text-foreground">Messages</span>
+              </div>
+              <AnimatePresence>
+                {showNotif && (
+                  <motion.span
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 18 }}
+                    className="text-[7px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full font-bold"
+                  >
+                    2 new
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="space-y-2">
+              {MESSAGES.map((m, i) => (
+                <motion.div
+                  key={m.name}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 + i * 0.1, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex items-start gap-2"
+                >
+                  <div
+                    className="h-[18px] w-[18px] rounded-full flex-shrink-0 flex items-center justify-center text-[6px] font-bold text-white"
+                    style={{ background: `hsl(${m.hue}, 65%, 55%)` }}
+                  >
+                    {m.avatar}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <span className="text-[8px] font-semibold text-foreground leading-none">{m.name}</span>
+                      {m.unread && (
+                        <motion.span
+                          animate={{ scale: [1, 1.4, 1] }}
+                          transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+                          className="h-[5px] w-[5px] rounded-full bg-primary flex-shrink-0"
+                        />
+                      )}
+                    </div>
+                    <p className="text-[8px] text-muted-foreground truncate leading-none">{m.msg}</p>
+                  </div>
+                  <span className="text-[7px] text-muted-foreground/60 flex-shrink-0 mt-0.5">{m.time}</span>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* AI reply hint */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: showNotif ? 1 : 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="mt-2.5 flex items-center gap-1.5 bg-primary/8 border border-primary/15 rounded-lg px-2 py-1.5"
+            >
+              <Bot size={9} className="text-primary flex-shrink-0" />
+              <span className="text-[8px] text-primary font-medium">AI replied to Alex</span>
+              <motion.span
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+                className="ml-auto text-[7px] text-primary/60"
+              >
+                just now
+              </motion.span>
+            </motion.div>
+          </GlassCard>
+        </motion.div>
+      </motion.div>
+
+      {/* ══════════════════════════════════
+          CALENDAR CARD (bottom-left)
+      ══════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, y: 22, scale: 0.93 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.65, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute left-3 bottom-0 w-[44%] z-20"
+      >
+        <motion.div
+          animate={{ y: [0, -7, 0] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+        >
+          <GlassCard className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[9px] font-semibold text-foreground">May 2026</span>
+              <span className="text-[8px] text-primary font-medium">3 slots left</span>
+            </div>
+
+            {/* Weekday labels */}
+            <div className="grid grid-cols-7 gap-0.5 mb-1">
+              {["M","T","W","T","F","S","S"].map((d, i) => (
+                <div key={i} className="text-center text-[7px] font-medium text-muted-foreground/60">{d}</div>
+              ))}
+            </div>
+
+            {/* Day grid */}
+            <div className="grid grid-cols-7 gap-0.5">
+              {CAL_DAYS.map(({ d, prev }, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.7 + i * 0.025, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className={cn(
+                    "aspect-square flex items-center justify-center text-[8px] rounded-md font-medium cursor-default transition-colors",
+                    prev           ? "text-muted-foreground/30" :
+                    d === 2        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/40" :
+                    BOOKED_DAYS.has(d) ? "bg-primary/15 text-primary" :
+                                    "text-muted-foreground hover:bg-muted/60"
+                  )}
+                >
+                  {d}
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Next appointment */}
+            <div className="mt-2 flex items-center gap-1.5 bg-primary/8 border border-primary/15 rounded-lg px-2 py-1.5">
+              <motion.span
+                animate={{ opacity: [1, 0.3, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                className="h-1 w-1 rounded-full bg-primary flex-shrink-0"
+              />
+              <span className="text-[8px] text-primary font-medium">Next: 10:00 AM · Today</span>
+            </div>
+          </GlassCard>
+        </motion.div>
+      </motion.div>
+
     </div>
   );
 }
