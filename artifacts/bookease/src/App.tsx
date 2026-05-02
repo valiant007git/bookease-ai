@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, useClerk, useAuth } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 import LandingPage from "@/pages/landing";
 import DashboardPage from "@/pages/dashboard";
@@ -99,6 +100,14 @@ const clerkAppearance = {
   },
 };
 
+function LoadingSpinner() {
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
 function SignInPage() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-muted/40 px-4 py-8">
@@ -126,24 +135,42 @@ function SignUpPage() {
 }
 
 function HomeRedirect() {
-  return (
-    <>
-      <Show when="signed-in">
-        <Redirect to="/dashboard" />
-      </Show>
-      <Show when="signed-out">
-        <LandingPage />
-      </Show>
-    </>
-  );
+  const { isLoaded, isSignedIn } = useAuth();
+
+  if (!isLoaded) return <LoadingSpinner />;
+  if (isSignedIn) return <Redirect to="/dashboard" />;
+  return <LandingPage />;
 }
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  return (
-    <Show when="signed-in" fallback={<Redirect to="/sign-in" />}>
-      {children}
-    </Show>
-  );
+  const { isLoaded, isSignedIn } = useAuth();
+  const [location] = useLocation();
+
+  if (!isLoaded) return <LoadingSpinner />;
+
+  if (!isSignedIn) {
+    const returnTo = encodeURIComponent(basePath + location);
+    return <Redirect to={`/sign-in?redirect_url=${returnTo}`} />;
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * Registers a Clerk session-token getter with the API client so every
+ * generated fetch hook sends an Authorization: Bearer <token> header.
+ * This is required in Replit's dev environment where Clerk's session cookie
+ * is not forwarded to the /api server by the browser.
+ */
+function ClerkAuthTokenSync() {
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+    return () => setAuthTokenGetter(null);
+  }, [getToken]);
+
+  return null;
 }
 
 function ClerkQueryClientCacheInvalidator() {
@@ -182,6 +209,7 @@ function ClerkProviderWithRoutes() {
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
       <QueryClientProvider client={queryClient}>
+        <ClerkAuthTokenSync />
         <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
           <Switch>

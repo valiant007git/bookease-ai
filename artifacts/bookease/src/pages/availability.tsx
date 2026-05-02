@@ -78,7 +78,7 @@ export default function AvailabilityPage() {
   const handleUpdate = async (id: number) => {
     setSaving(true);
     try {
-      await updateSlot({ id, data: editForm });
+      await updateSlot({ slotId: id, data: editForm });
       await invalidate();
       setEditingId(null);
     } catch {
@@ -90,7 +90,7 @@ export default function AvailabilityPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await deleteSlot({ id });
+      await deleteSlot({ slotId: id });
       await invalidate();
     } catch {
       toast({ title: "Failed to delete slot", variant: "destructive" });
@@ -100,7 +100,7 @@ export default function AvailabilityPage() {
   const handleToggle = async (slot: AvailabilitySlot) => {
     try {
       await updateSlot({
-        id: slot.id,
+        slotId: slot.id,
         data: {
           dayOfWeek: slot.dayOfWeek,
           startTime: slot.startTime,

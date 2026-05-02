@@ -126,7 +126,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-destructive"
-              onClick={() => signOut()}
+              onClick={() => signOut({ redirectUrl: (import.meta.env.BASE_URL || "/").replace(/\/$/, "") + "/" })}
             >
               <LogOut size={14} />
             </Button>

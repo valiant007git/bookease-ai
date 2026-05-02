@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { eq, and } from "drizzle-orm";
 import { db, businesses, availabilitySlots } from "@workspace/db";
 import {
@@ -9,16 +8,9 @@ import {
   DeleteAvailabilitySlotParams,
   ListBusinessAvailabilityParams,
 } from "@workspace/api-zod";
+import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 
 const router = Router();
-
-const requireAuth = (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  const userId = auth?.sessionClaims?.userId || auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  req.userId = userId;
-  next();
-};
 
 const getBusinessForUser = async (userId: string) => {
   const [business] = await db

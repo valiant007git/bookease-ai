@@ -106,7 +106,7 @@ export default function BookingsPage() {
   const handleStatusChange = async (id: number, status: AppointmentStatus) => {
     setUpdatingId(id);
     try {
-      await updateStatus({ id, data: { status } });
+      await updateStatus({ appointmentId: id, data: { status } });
       await queryClient.invalidateQueries({ queryKey: getListMyAppointmentsQueryKey({}) });
       await queryClient.invalidateQueries({ queryKey: getListMyAppointmentsQueryKey({ status: statusFilter as AppointmentStatus }) });
     } catch {

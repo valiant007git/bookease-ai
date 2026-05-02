@@ -58,10 +58,14 @@ Express 5 REST API. Routes:
 
 ## Important Notes
 
-- **Clerk**: Use `@clerk/react@^6.5.0` with `@clerk/shared@^4.9.0` override in `pnpm-workspace.yaml`. Do NOT use `@clerk/react@5.x` — it has a naming mismatch with @clerk/shared@4.x.
+- **Clerk**: Use `@clerk/react@^6.5.0` with `@clerk/shared@^4.9.0` override in `pnpm-workspace.yaml`. Do NOT use `@clerk/react@5.x` — naming mismatch with @clerk/shared@4.x.
 - **Toast**: Pages use `useToast` hook from `@/hooks/use-toast` (not `toast` from `@/components/ui/toaster`).
-- **Auth**: `getAuth(req)` from `@clerk/express` for server-side auth. `useUser()` / `useClerk()` on the client.
-- **Mutations**: Generated hooks take `{ data: Body }` wrapper for request bodies.
+- **Auth guards**: Use `useAuth()` with `isLoaded` check — NOT `<Show when="signed-in">`. The `Show` component does not handle the loading state and causes redirect flashes on every page refresh.
+- **API token**: `setAuthTokenGetter` from `@workspace/api-client-react` is called inside `ClerkAuthTokenSync` (in App.tsx) with `getToken()` from `useAuth()`. This attaches `Authorization: Bearer <token>` to all generated fetch hooks. Required in Replit dev mode because Clerk session cookies are not forwarded to the /api server.
+- **requireAuth middleware**: Single shared middleware at `artifacts/api-server/src/middlewares/requireAuth.ts`. Import from there in all route files — do NOT re-declare inline.
+- **Mutations**: Generated hooks take `{ data: Body }` wrapper for request bodies. Param keys match OpenAPI names — e.g. `slotId`, `appointmentId` (not `id`).
+- **Logout**: Use `signOut({ redirectUrl: ... })` — without `redirectUrl`, Clerk signs out but stays on the current (protected) page.
+- **Redirect after login**: `fallbackRedirectUrl` on `<SignIn>`/`<SignUp>` handles default post-auth redirect. `AuthGuard` passes `?redirect_url=<path>` so Clerk returns the user to the page they originally requested.
 - **AI chat**: SSE endpoint at `/api/chat/:businessId` streams tokens via `text/event-stream`.
 - **Widget URL**: `{origin}{basePath}/widget/{businessId}` — shown in Business Profile page.
 
