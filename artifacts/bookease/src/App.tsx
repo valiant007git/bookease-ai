@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 import LandingPage from "@/pages/landing";
+import OnboardingPage from "@/pages/onboarding";
 import DashboardPage from "@/pages/dashboard";
 import BookingsPage from "@/pages/bookings";
 import AvailabilityPage from "@/pages/availability";
@@ -128,7 +129,7 @@ function SignUpPage() {
         routing="path"
         path={`${basePath}/sign-up`}
         signInUrl={`${basePath}/sign-in`}
-        fallbackRedirectUrl={`${basePath}/dashboard`}
+        fallbackRedirectUrl={`${basePath}/onboarding`}
       />
     </div>
   );
@@ -238,6 +239,12 @@ function ClerkProviderWithRoutes() {
             <Route path="/business">
               <AuthGuard>
                 <BusinessPage />
+              </AuthGuard>
+            </Route>
+
+            <Route path="/onboarding">
+              <AuthGuard>
+                <OnboardingPage />
               </AuthGuard>
             </Route>
 
