@@ -3,13 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: BookEase AI API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: businesses
+    description: Business profile management
+  - name: availability
+    description: Business availability/timings management
+  - name: appointments
+    description: Appointment booking and management
+  - name: chat
+    description: AI chatbot for customer booking
+  - name: dashboard
+    description: Dashboard summary and analytics
+  - name: openai
+    description: OpenAI AI chat operations
 paths:
   /healthz:
     get:
@@ -24,6 +36,421 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /businesses/me:
+    get:
+      operationId: getMyBusiness
+      tags: [businesses]
+      summary: Get the current user's business profile
+      responses:
+        "200":
+          description: Business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: upsertMyBusiness
+      tags: [businesses]
+      summary: Create or update the current user's business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertBusinessBody"
+      responses:
+        "200":
+          description: Updated business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+
+  /businesses/{businessId}:
+    get:
+      operationId: getBusinessById
+      tags: [businesses]
+      summary: Get a business by ID (public, for customer chatbot)
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /businesses/me/availability:
+    get:
+      operationId: listMyAvailability
+      tags: [availability]
+      summary: List availability slots for current user's business
+      responses:
+        "200":
+          description: List of availability slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilitySlot"
+    post:
+      operationId: createAvailabilitySlot
+      tags: [availability]
+      summary: Create a new availability slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAvailabilitySlotBody"
+      responses:
+        "201":
+          description: Created slot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilitySlot"
+
+  /businesses/me/availability/{slotId}:
+    put:
+      operationId: updateAvailabilitySlot
+      tags: [availability]
+      summary: Update an availability slot
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAvailabilitySlotBody"
+      responses:
+        "200":
+          description: Updated slot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilitySlot"
+    delete:
+      operationId: deleteAvailabilitySlot
+      tags: [availability]
+      summary: Delete an availability slot
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /businesses/{businessId}/availability:
+    get:
+      operationId: listBusinessAvailability
+      tags: [availability]
+      summary: List availability for a business (public, for customer chatbot)
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of availability slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilitySlot"
+
+  /businesses/me/appointments:
+    get:
+      operationId: listMyAppointments
+      tags: [appointments]
+      summary: List all appointments for current user's business
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+        - name: date
+          in: query
+          schema:
+            type: string
+            description: Filter by date (YYYY-MM-DD)
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+
+  /businesses/me/appointments/{appointmentId}:
+    get:
+      operationId: getMyAppointment
+      tags: [appointments]
+      summary: Get a specific appointment
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+    patch:
+      operationId: updateAppointmentStatus
+      tags: [appointments]
+      summary: Update appointment status
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentStatusBody"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /businesses/{businessId}/appointments:
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Book an appointment (public, via chatbot)
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentBody"
+      responses:
+        "201":
+          description: Created appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/upcoming:
+    get:
+      operationId: getUpcomingAppointments
+      tags: [dashboard]
+      summary: Get upcoming appointments (next 7 days)
+      responses:
+        "200":
+          description: Upcoming appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+
+  /chat/{businessId}:
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a message to the AI booking chatbot
+      parameters:
+        - name: businessId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendChatMessageBody"
+      responses:
+        "200":
+          description: SSE stream of AI response
+          content:
+            text/event-stream: {}
+
+  /openai/conversations:
+    get:
+      operationId: listOpenaiConversations
+      tags: [openai]
+      summary: List all conversations
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenaiConversation"
+    post:
+      operationId: createOpenaiConversation
+      tags: [openai]
+      summary: Create a new conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOpenaiConversationBody"
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversation"
+
+  /openai/conversations/{id}:
+    get:
+      operationId: getOpenaiConversation
+      tags: [openai]
+      summary: Get conversation with messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversationWithMessages"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiError"
+    delete:
+      operationId: deleteOpenaiConversation
+      tags: [openai]
+      summary: Delete a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiError"
+
+  /openai/conversations/{id}/messages:
+    get:
+      operationId: listOpenaiMessages
+      tags: [openai]
+      summary: List messages in a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenaiMessage"
+    post:
+      operationId: sendOpenaiMessage
+      tags: [openai]
+      summary: Send a text message and receive a streaming text response
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOpenaiMessageBody"
+      responses:
+        "200":
+          description: SSE stream of assistant text chunks
+          content:
+            text/event-stream: {}
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +461,312 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Business:
+      type: object
+      properties:
+        id:
+          type: integer
+        ownerId:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          enum: [clinic, salon, gym, restaurant, spa, dental, barber, other]
+        description:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        logo:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - ownerId
+        - name
+        - category
+        - createdAt
+        - updatedAt
+
+    UpsertBusinessBody:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [clinic, salon, gym, restaurant, spa, dental, barber, other]
+        description:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        website:
+          type: string
+        logo:
+          type: string
+      required:
+        - name
+        - category
+
+    AvailabilitySlot:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        dayOfWeek:
+          type: integer
+          description: "0=Sunday, 1=Monday, ..., 6=Saturday"
+        startTime:
+          type: string
+          description: "HH:MM format"
+        endTime:
+          type: string
+          description: "HH:MM format"
+        slotDurationMinutes:
+          type: integer
+          description: Duration of each appointment slot in minutes
+        isActive:
+          type: boolean
+      required:
+        - id
+        - businessId
+        - dayOfWeek
+        - startTime
+        - endTime
+        - slotDurationMinutes
+        - isActive
+
+    CreateAvailabilitySlotBody:
+      type: object
+      properties:
+        dayOfWeek:
+          type: integer
+        startTime:
+          type: string
+        endTime:
+          type: string
+        slotDurationMinutes:
+          type: integer
+        isActive:
+          type: boolean
+      required:
+        - dayOfWeek
+        - startTime
+        - endTime
+        - slotDurationMinutes
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+          nullable: true
+        customerPhone:
+          type: string
+          nullable: true
+        service:
+          type: string
+          nullable: true
+        appointmentDate:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - businessId
+        - customerName
+        - appointmentDate
+        - status
+        - createdAt
+
+    CreateAppointmentBody:
+      type: object
+      properties:
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        customerPhone:
+          type: string
+        service:
+          type: string
+        appointmentDate:
+          type: string
+          format: date-time
+        notes:
+          type: string
+      required:
+        - customerName
+        - appointmentDate
+
+    UpdateAppointmentStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed]
+      required:
+        - status
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalAppointments:
+          type: integer
+        pendingAppointments:
+          type: integer
+        confirmedAppointments:
+          type: integer
+        completedAppointments:
+          type: integer
+        cancelledAppointments:
+          type: integer
+        todayAppointments:
+          type: integer
+        thisWeekAppointments:
+          type: integer
+      required:
+        - totalAppointments
+        - pendingAppointments
+        - confirmedAppointments
+        - completedAppointments
+        - cancelledAppointments
+        - todayAppointments
+        - thisWeekAppointments
+
+    SendChatMessageBody:
+      type: object
+      properties:
+        message:
+          type: string
+        sessionId:
+          type: string
+          description: Client session ID for conversation continuity
+      required:
+        - message
+        - sessionId
+
+    OpenaiConversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - createdAt
+
+    OpenaiMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        role:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - conversationId
+        - role
+        - content
+        - createdAt
+
+    CreateOpenaiConversationBody:
+      type: object
+      properties:
+        title:
+          type: string
+      required:
+        - title
+
+    SendOpenaiMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    OpenaiConversationWithMessages:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpenaiMessage"
+      required:
+        - id
+        - title
+        - createdAt
+        - messages
+
+    OpenaiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
