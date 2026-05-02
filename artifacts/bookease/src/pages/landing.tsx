@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@clerk/react";
-import { motion, useInView, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import { motion, useInView, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -949,77 +949,274 @@ function FooterSection() {
   );
 }
 
+// ─── Particle canvas ──────────────────────────────────────────────────────────
+function ParticleCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId: number;
+    let W = canvas.offsetWidth;
+    let H = canvas.offsetHeight;
+    canvas.width = W;
+    canvas.height = H;
+
+    const COLORS = ["120,87,255", "139,92,246", "99,102,241", "168,85,247"];
+    type P = { x: number; y: number; vx: number; vy: number; r: number; a: number; c: string };
+    const pts: P[] = Array.from({ length: 70 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.38,
+      vy: (Math.random() - 0.5) * 0.38,
+      r: Math.random() * 2.2 + 0.4,
+      a: Math.random() * 0.45 + 0.08,
+      c: COLORS[Math.floor(Math.random() * COLORS.length)],
+    }));
+
+    const tick = () => {
+      ctx.clearRect(0, 0, W, H);
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x;
+          const dy = pts[i].y - pts[j].y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < 115) {
+            ctx.beginPath();
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.strokeStyle = `rgba(120,87,255,${(1 - d / 115) * 0.07})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      for (const p of pts) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.c},${p.a})`;
+        ctx.fill();
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < -6) p.x = W + 6;
+        if (p.x > W + 6) p.x = -6;
+        if (p.y < -6) p.y = H + 6;
+        if (p.y > H + 6) p.y = -6;
+      }
+      animId = requestAnimationFrame(tick);
+    };
+    tick();
+
+    const onResize = () => {
+      W = canvas.offsetWidth; H = canvas.offsetHeight;
+      canvas.width = W; canvas.height = H;
+    };
+    window.addEventListener("resize", onResize);
+    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); };
+  }, []);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
+}
+
 // ─── Hero ──────────────────────────────────────────────────────────────────────
 function HeroSection() {
   const avatars = ["SC", "MD", "PN", "JK", "AK", "TR"];
 
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const smoothX = useSpring(mouseX, { stiffness: 38, damping: 22 });
+  const smoothY = useSpring(mouseY, { stiffness: 38, damping: 22 });
+
+  const blob1X = useTransform(smoothX, [-1, 1], [-35, 35]);
+  const blob1Y = useTransform(smoothY, [-1, 1], [-22, 22]);
+  const blob2X = useTransform(smoothX, [-1, 1], [22, -22]);
+  const blob2Y = useTransform(smoothY, [-1, 1], [18, -18]);
+  const blob3X = useTransform(smoothX, [-1, 1], [-14, 14]);
+  const blob3Y = useTransform(smoothY, [-1, 1], [-28, 28]);
+  const mockupX = useTransform(smoothX, [-1, 1], [14, -14]);
+  const mockupY = useTransform(smoothY, [-1, 1], [8, -8]);
+  const mockupRotY = useTransform(smoothX, [-1, 1], [8, -8]);
+  const mockupRotX = useTransform(smoothY, [-1, 1], [-5, 5]);
+
+  const floatingDots: { top: string; left?: string; right?: string; delay: number; size: string }[] = [
+    { top: "18%", left: "7%",  delay: 0,   size: "w-1.5 h-1.5" },
+    { top: "62%", left: "4%",  delay: 1.4, size: "w-2 h-2" },
+    { top: "28%", right: "6%", delay: 0.7, size: "w-1.5 h-1.5" },
+    { top: "74%", right: "9%", delay: 2.1, size: "w-2.5 h-2.5" },
+    { top: "11%", left: "28%", delay: 1.0, size: "w-1 h-1" },
+    { top: "84%", left: "44%", delay: 2.9, size: "w-1.5 h-1.5" },
+    { top: "45%", left: "2%",  delay: 3.2, size: "w-1 h-1" },
+    { top: "55%", right: "3%", delay: 0.4, size: "w-2 h-2" },
+  ];
+
+  function onMouseMove(e: React.MouseEvent<HTMLElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    mouseX.set((e.clientX - r.left - r.width / 2) / (r.width / 2));
+    mouseY.set((e.clientY - r.top - r.height / 2) / (r.height / 2));
+  }
+  function onMouseLeave() { mouseX.set(0); mouseY.set(0); }
+
   return (
-    <section className="relative min-h-[100dvh] flex items-center pt-16 overflow-hidden">
-      {/* Animated gradient background orbs */}
-      <div className="absolute inset-0 -z-10 overflow-hidden">
+    <section
+      className="relative min-h-[100dvh] flex items-center pt-16 overflow-hidden"
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+    >
+      {/* ── Deep mesh glow backdrop ── */}
+      <div className="absolute inset-0 -z-30 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_55%_at_50%_-5%,hsl(var(--primary)/0.22),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_85%_85%,rgba(139,92,246,0.14),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_8%_55%,rgba(99,102,241,0.11),transparent)]" />
+      </div>
+
+      {/* ── Animated parallax orbs ── */}
+      <div className="absolute inset-0 -z-20 overflow-hidden pointer-events-none">
         <motion.div
-          animate={{ x: [0, 80, 0], y: [0, 40, 0], scale: [1, 1.1, 1] }}
-          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-32 -right-32 w-[700px] h-[700px] bg-primary/20 dark:bg-primary/15 rounded-full blur-3xl"
+          style={{ x: blob1X, y: blob1Y }}
+          animate={{ scale: [1, 1.14, 1], opacity: [0.55, 0.8, 0.55] }}
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-44 -right-20 w-[720px] h-[720px] bg-primary/22 rounded-full blur-[110px]"
         />
         <motion.div
-          animate={{ x: [0, -60, 0], y: [0, 60, 0], scale: [1, 0.95, 1] }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-          className="absolute top-1/3 -left-48 w-[600px] h-[600px] bg-violet-500/15 dark:bg-violet-500/10 rounded-full blur-3xl"
+          style={{ x: blob2X, y: blob2Y }}
+          animate={{ scale: [1, 0.88, 1], opacity: [0.45, 0.7, 0.45] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute top-1/3 -left-52 w-[600px] h-[600px] bg-violet-500/20 rounded-full blur-[90px]"
         />
         <motion.div
-          animate={{ x: [0, 40, 0], y: [0, -50, 0] }}
-          transition={{ duration: 26, repeat: Infinity, ease: "easeInOut", delay: 6 }}
-          className="absolute -bottom-20 right-1/4 w-[500px] h-[500px] bg-indigo-500/15 dark:bg-indigo-500/10 rounded-full blur-3xl"
+          style={{ x: blob3X, y: blob3Y }}
+          animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.65, 0.4] }}
+          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", delay: 4.5 }}
+          className="absolute -bottom-28 right-1/4 w-[520px] h-[520px] bg-indigo-500/18 rounded-full blur-[85px]"
+        />
+        <motion.div
+          animate={{ scale: [0.75, 1.15, 0.75], opacity: [0.2, 0.5, 0.2] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] bg-primary/10 rounded-full blur-[55px]"
         />
       </div>
 
+      {/* ── Floating particles ── */}
+      <div className="absolute inset-0 -z-10 pointer-events-none opacity-65">
+        <ParticleCanvas />
+      </div>
+
+      {/* ── Floating geometric shapes ── */}
+      <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 42, repeat: Infinity, ease: "linear" }}
+          className="absolute top-16 right-[14%] w-[88px] h-[88px] rounded-full border border-primary/18"
+        />
+        <motion.div
+          animate={{ rotate: -360 }}
+          transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+          className="absolute top-[4.5rem] right-[15%] w-14 h-14 rounded-full border border-violet-400/12"
+        />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 52, repeat: Infinity, ease: "linear", delay: 5 }}
+          className="absolute bottom-36 left-[7%] w-20 h-20 rounded-full border border-indigo-400/14"
+        />
+        <motion.div
+          animate={{ rotate: [0, 18, 0], y: [0, -22, 0] }}
+          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+          className="absolute top-[38%] right-[2.5%] w-12 h-12 rounded-xl bg-violet-500/7 blur-sm border border-violet-400/12"
+        />
+        <motion.div
+          animate={{ rotate: [0, -22, 0], y: [0, 20, 0] }}
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute bottom-[18%] left-[11%] w-9 h-9 rounded-xl bg-primary/7 blur-sm border border-primary/10"
+        />
+        {floatingDots.map((dot, i) => (
+          <motion.div
+            key={i}
+            animate={{ y: [0, -16, 0], opacity: [0.25, 0.65, 0.25] }}
+            transition={{ duration: 4 + i * 0.6, repeat: Infinity, ease: "easeInOut", delay: dot.delay }}
+            className={cn("absolute rounded-full bg-primary/50", dot.size)}
+            style={{ top: dot.top, left: dot.left, right: dot.right }}
+          />
+        ))}
+      </div>
+
+      {/* ── Content ── */}
       <div className="max-w-7xl mx-auto px-5 sm:px-8 w-full py-16 md:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+
           {/* Left — copy */}
           <div>
             {/* Badge */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-7"
+              initial={{ opacity: 0, scale: 0.82, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs font-semibold uppercase tracking-wider mb-7"
             >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/70 opacity-75" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/60 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
               </span>
               AI-powered · Always on · Zero setup
             </motion.div>
 
-            {/* Headline */}
-            <motion.h1
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-foreground leading-[1.04] mb-5"
-            >
-              Your AI{" "}
-              <span className="relative">
+            {/* Headline — word-by-word blur reveal */}
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-foreground leading-[1.04] mb-5">
+              {(["Your", "AI"] as const).map((word, i) => (
+                <motion.span
+                  key={word}
+                  initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.58, delay: 0.1 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                  className="inline-block mr-[0.22em]"
+                >
+                  {word}
+                </motion.span>
+              ))}
+              <br />
+              {/* Gradient highlight with underline draw + shimmer */}
+              <motion.span
+                initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 0.62, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="relative inline-block mr-[0.22em]"
+              >
                 <span className="relative z-10 bg-gradient-to-r from-primary via-violet-500 to-indigo-500 bg-clip-text text-transparent">
                   front desk
                 </span>
                 <motion.span
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ delay: 0.7, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                  className="absolute -bottom-1 left-0 right-0 h-[3px] bg-gradient-to-r from-primary to-violet-500 rounded-full origin-left"
+                  transition={{ delay: 0.9, duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute -bottom-1 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-violet-500 to-indigo-500 rounded-full origin-left"
                 />
-              </span>
+                <motion.span
+                  initial={{ x: "-110%", opacity: 0 }}
+                  animate={{ x: "210%", opacity: [0, 0.7, 0] }}
+                  transition={{ delay: 1.55, duration: 0.75, ease: "easeOut" }}
+                  className="absolute inset-0 z-20 bg-gradient-to-r from-transparent via-white/35 to-transparent skew-x-12 pointer-events-none"
+                />
+              </motion.span>
               <br />
-              for bookings.
-            </motion.h1>
+              {(["for", "bookings."] as const).map((word, i) => (
+                <motion.span
+                  key={word}
+                  initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{ duration: 0.58, delay: 0.46 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                  className="inline-block mr-[0.22em]"
+                >
+                  {word}
+                </motion.span>
+              ))}
+            </h1>
 
             {/* Sub */}
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ duration: 0.62, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
               className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-lg mb-9"
             >
               BookEase AI handles appointments 24/7 for clinics, salons, gyms, and service businesses — so you can focus on delivering great service.
@@ -1027,35 +1224,41 @@ function HeroSection() {
 
             {/* CTA */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.32, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.52, delay: 0.84, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col sm:flex-row gap-3 mb-9"
             >
               <Link href="/sign-up">
-                <Button
-                  size="lg"
-                  className="h-13 px-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-base font-semibold shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 gap-2"
-                >
-                  Start for free <ArrowRight size={17} />
-                </Button>
+                <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.18 }}>
+                  <Button
+                    size="lg"
+                    className="relative h-13 px-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-base font-semibold overflow-hidden shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/45 transition-shadow gap-2"
+                  >
+                    <span className="absolute inset-0 bg-gradient-to-r from-white/12 via-transparent to-transparent rounded-full pointer-events-none" />
+                    <span className="relative">Start for free</span>
+                    <ArrowRight size={17} className="relative" />
+                  </Button>
+                </motion.div>
               </Link>
               <a href="#features">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-13 px-8 rounded-full text-base border-border hover:border-primary/40 hover:bg-muted/60"
-                >
-                  See how it works
-                </Button>
+                <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.18 }}>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-13 px-8 rounded-full text-base border-border hover:border-primary/50 hover:bg-primary/5 transition-all"
+                  >
+                    See how it works
+                  </Button>
+                </motion.div>
               </a>
             </motion.div>
 
             {/* Social proof */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.0, duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6"
             >
               <div className="flex items-center gap-2">
@@ -1085,22 +1288,23 @@ function HeroSection() {
             </motion.div>
           </div>
 
-          {/* Right — mockup */}
+          {/* Right — mockup with 3D mouse parallax */}
           <motion.div
-            initial={{ opacity: 0, x: 40, rotateY: -5 }}
+            style={{ perspective: "1200px", x: mockupX, y: mockupY, rotateY: mockupRotY, rotateX: mockupRotX }}
+            initial={{ opacity: 0, x: 64, rotateY: -10 }}
             animate={{ opacity: 1, x: 0, rotateY: 0 }}
-            transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 1.05, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
             className="hidden lg:block"
           >
             <ProductMockup />
           </motion.div>
         </div>
 
-        {/* Mobile mockup below CTA */}
+        {/* Mobile mockup */}
         <motion.div
-          initial={{ opacity: 0, y: 32 }}
+          initial={{ opacity: 0, y: 36 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.72, delay: 0.52, ease: [0.22, 1, 0.36, 1] }}
           className="lg:hidden mt-12"
         >
           <ProductMockup />
