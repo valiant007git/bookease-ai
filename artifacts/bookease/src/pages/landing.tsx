@@ -325,31 +325,64 @@ function NavBar() {
 }
 
 // ─── Product mockup (live fake UI) ────────────────────────────────────────────
+type ChatPhase = "user-typing" | "thinking" | "ai-typing" | "pausing" | "fading";
+
+const USER_MSG = "Hi! I'd like to book a haircut for Saturday morning.";
+const AI_MSG   = "I have Saturday 10:00 AM or 2:30 PM free. Which works for you? 😊";
+
 function ProductMockup() {
-  const [typedText, setTypedText] = useState("");
-  const fullText = "Hi! I'd like to book a haircut for Saturday morning.";
-  const indexRef = useRef(0);
+  const [phase, setPhase]       = useState<ChatPhase>("user-typing");
+  const [userText, setUserText] = useState("");
+  const [aiText, setAiText]     = useState("");
+  const phaseRef = useRef<ChatPhase>("user-typing");
+
+  // Keep phaseRef in sync so timeouts can safely read current phase
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (indexRef.current < fullText.length) {
-        setTypedText(fullText.slice(0, indexRef.current + 1));
-        indexRef.current += 1;
+    let t: ReturnType<typeof setTimeout>;
+
+    if (phase === "user-typing") {
+      if (userText.length < USER_MSG.length) {
+        const delay = 38 + Math.random() * 42; // 38-80 ms — feels human
+        t = setTimeout(() => setUserText(USER_MSG.slice(0, userText.length + 1)), delay);
       } else {
-        setTimeout(() => {
-          setTypedText("");
-          indexRef.current = 0;
-        }, 3000);
+        t = setTimeout(() => setPhase("thinking"), 520);
       }
-    }, 55);
-    return () => clearInterval(timer);
-  }, []);
+    } else if (phase === "thinking") {
+      t = setTimeout(() => setPhase("ai-typing"), 1600);
+    } else if (phase === "ai-typing") {
+      if (aiText.length < AI_MSG.length) {
+        const delay = 22 + Math.random() * 32; // 22-54 ms — AI types slightly faster
+        t = setTimeout(() => setAiText(AI_MSG.slice(0, aiText.length + 1)), delay);
+      } else {
+        t = setTimeout(() => setPhase("pausing"), 2800);
+      }
+    } else if (phase === "pausing") {
+      t = setTimeout(() => setPhase("fading"), 400);
+    } else if (phase === "fading") {
+      // Brief pause for fade-out, then hard reset
+      t = setTimeout(() => {
+        setUserText("");
+        setAiText("");
+        setPhase("user-typing");
+      }, 600);
+    }
+
+    return () => clearTimeout(t);
+  }, [phase, userText, aiText]);
+
+  const showUserBubble  = phase !== "fading" && userText.length > 0;
+  const showThinking    = phase === "thinking";
+  const showAiBubble    = (phase === "ai-typing" || phase === "pausing") && aiText.length > 0;
+  const isFading        = phase === "fading";
+  const isUserTyping    = phase === "user-typing";
 
   const appointments = [
-    { time: "9:00 AM", name: "Sarah Johnson", service: "Balayage & Cut", status: "confirmed", color: "bg-emerald-400" },
-    { time: "11:00 AM", name: "Mike Chen", service: "Men's Cut & Style", status: "in progress", color: "bg-amber-400" },
-    { time: "2:00 PM", name: "Emma Wilson", service: "Full Highlights", status: "pending", color: "bg-indigo-400" },
-    { time: "4:30 PM", name: "Aisha K.", service: "Blowout", status: "confirmed", color: "bg-emerald-400" },
+    { time: "9:00 AM",  name: "Sarah Johnson", service: "Balayage & Cut",    status: "confirmed",   color: "bg-emerald-400" },
+    { time: "11:00 AM", name: "Mike Chen",      service: "Men's Cut & Style", status: "in progress", color: "bg-amber-400"   },
+    { time: "2:00 PM",  name: "Emma Wilson",    service: "Full Highlights",   status: "pending",     color: "bg-indigo-400"  },
+    { time: "4:30 PM",  name: "Aisha K.",        service: "Blowout",           status: "confirmed",   color: "bg-emerald-400" },
   ];
 
   return (
@@ -373,7 +406,7 @@ function ProductMockup() {
 
         {/* App content */}
         <div className="p-4 space-y-3">
-          {/* Header */}
+          {/* Schedule header */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-foreground">Today's Schedule</p>
@@ -392,8 +425,8 @@ function ProductMockup() {
                 key={a.name}
                 initial={{ opacity: 0, x: -12 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.12, duration: 0.4 }}
-                className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors cursor-default"
+                transition={{ delay: 0.3 + i * 0.12, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/40 cursor-default"
               >
                 <div className={`h-2 w-2 rounded-full flex-shrink-0 ${a.color}`} />
                 <div className="flex-1 min-w-0">
@@ -404,9 +437,9 @@ function ProductMockup() {
                   <span className="text-[10px] text-muted-foreground">{a.time}</span>
                   <span className={cn(
                     "text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wide",
-                    a.status === "confirmed" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" :
+                    a.status === "confirmed"   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" :
                     a.status === "in progress" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" :
-                    "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400"
+                                                 "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400"
                   )}>
                     {a.status}
                   </span>
@@ -415,40 +448,111 @@ function ProductMockup() {
             ))}
           </div>
 
-          {/* Chat widget */}
-          <div className="border border-primary/20 rounded-xl p-3 bg-primary/5">
-            <div className="flex items-center gap-2 mb-2">
+          {/* ── Chat widget ── */}
+          <motion.div
+            animate={{ opacity: isFading ? 0 : 1 }}
+            transition={{ duration: 0.55, ease: "easeInOut" }}
+            className="border border-primary/20 rounded-xl overflow-hidden bg-primary/5"
+          >
+            {/* Chat header */}
+            <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-primary/10">
               <div className="h-5 w-5 rounded-full bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center flex-shrink-0">
                 <Bot size={10} className="text-white" />
               </div>
               <span className="text-[10px] font-semibold text-primary">AI Assistant — Online</span>
-              <span className="ml-auto flex gap-0.5">
+              <span className="ml-auto flex gap-[3px] items-center">
                 {[0, 1, 2].map((i) => (
                   <motion.span
                     key={i}
-                    animate={{ opacity: [0.3, 1, 0.3] }}
-                    transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-                    className="h-1 w-1 rounded-full bg-emerald-400"
+                    animate={{ scale: [1, 1.4, 1], opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.18, ease: "easeInOut" }}
+                    className="h-[5px] w-[5px] rounded-full bg-emerald-400"
                   />
                 ))}
               </span>
             </div>
-            <div className="bg-background/60 rounded-lg px-3 py-2 text-[10px] text-foreground min-h-[28px]">
-              {typedText}
-              <motion.span
-                animate={{ opacity: [1, 0] }}
-                transition={{ duration: 0.6, repeat: Infinity }}
-                className="inline-block w-0.5 h-3 bg-primary ml-0.5 align-middle"
-              />
+
+            {/* Messages */}
+            <div className="px-3 py-2.5 space-y-2 min-h-[72px]">
+              <AnimatePresence>
+
+                {/* User message bubble */}
+                {showUserBubble && (
+                  <motion.div
+                    key="user-bubble"
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.95, transition: { duration: 0.3 } }}
+                    transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex justify-end"
+                  >
+                    <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-3 py-1.5 max-w-[85%]">
+                      <span className="text-[10px] leading-relaxed">
+                        {userText}
+                        {isUserTyping && (
+                          <motion.span
+                            animate={{ opacity: [1, 0, 1] }}
+                            transition={{ duration: 0.75, repeat: Infinity, ease: "easeInOut" }}
+                            className="inline-block w-[2px] h-[10px] bg-primary-foreground/70 ml-0.5 align-middle rounded-full"
+                          />
+                        )}
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* AI thinking indicator */}
+                {showThinking && (
+                  <motion.div
+                    key="thinking"
+                    initial={{ opacity: 0, y: 8, scale: 0.94 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.2 } }}
+                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex justify-start"
+                  >
+                    <div className="bg-background/80 border border-border/50 rounded-2xl rounded-bl-sm px-3 py-2 flex gap-1 items-center">
+                      {[0, 1, 2].map((i) => (
+                        <motion.span
+                          key={i}
+                          animate={{ y: [0, -4, 0] }}
+                          transition={{ duration: 0.65, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                          className="h-[5px] w-[5px] rounded-full bg-muted-foreground/50"
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* AI reply bubble */}
+                {showAiBubble && (
+                  <motion.div
+                    key="ai-bubble"
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.95, transition: { duration: 0.3 } }}
+                    transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex justify-start"
+                  >
+                    <div className="bg-background/80 border border-primary/20 rounded-2xl rounded-bl-sm px-3 py-1.5 max-w-[88%]">
+                      <span className="text-[10px] leading-relaxed text-foreground">
+                        {aiText}
+                        {phase === "ai-typing" && (
+                          <motion.span
+                            animate={{ opacity: [1, 0, 1] }}
+                            transition={{ duration: 0.75, repeat: Infinity, ease: "easeInOut" }}
+                            className="inline-block w-[2px] h-[10px] bg-primary/60 ml-0.5 align-middle rounded-full"
+                          />
+                        )}
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+
+              </AnimatePresence>
             </div>
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: typedText.length > 30 ? 1 : 0, y: typedText.length > 30 ? 0 : 4 }}
-              className="mt-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-[10px] text-primary"
-            >
-              I have Saturday 10:00 AM or 2:30 PM free. Which works for you? 😊
-            </motion.div>
-          </div>
+          </motion.div>
+
         </div>
       </div>
     </div>
